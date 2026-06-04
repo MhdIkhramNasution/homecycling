@@ -11,7 +11,6 @@ import 'privacy_page.dart';
 import 'welcome_screen.dart';
 import 'item_scanned_page.dart';
 import '../services/auth_service.dart';
-import '../services/user_session.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -30,7 +29,11 @@ class _ProfilePageState extends State<ProfilePage> {
     return "assets/images/$fileName.png";
   }
 
-  String username = UserSession.username;
+  String username = "";
+  String email = "";
+  String phone = "";
+  int points = 0;
+
   String? photoPath;
 
   final ImagePicker picker = ImagePicker();
@@ -42,11 +45,28 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Future<void> loadProfile() async {
-    final data = await AuthService.getProfile();
+
+    final data =
+    await AuthService.getProfile();
 
     setState(() {
-      username = data["username"]!;
-      photoPath = data["photo"];
+
+      username =
+          data["username"] ?? "";
+
+      email =
+          data["email"] ?? "";
+
+      phone =
+          data["phone"] ?? "";
+
+      points =
+          int.tryParse(
+            data["points"].toString(),
+          ) ?? 0;
+
+      photoPath =
+      data["photo"];
     });
   }
 
@@ -153,7 +173,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     const SizedBox(height: 5),
 
                     Text(
-                      UserSession.email,
+                      email,
 
                       style: const TextStyle(
                         color: Colors.grey,
@@ -164,11 +184,33 @@ class _ProfilePageState extends State<ProfilePage> {
                     const SizedBox(height: 5),
 
                     Text(
-                      UserSession.phone,
+                      phone,
 
                       style: const TextStyle(
                         color: Colors.grey,
                         fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 15,
+                        vertical: 8,
+                      ),
+
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF74A830),
+                        borderRadius:
+                        BorderRadius.circular(20),
+                      ),
+
+                      child: Text(
+                        "$points Eco Points",
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
 

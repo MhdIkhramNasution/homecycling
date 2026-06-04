@@ -64,6 +64,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
       email: emailController.text,
       phone: phoneController.text,
       photo: imagePath,
+      password: passwordController.text,
     );
 
     Navigator.pushReplacement(

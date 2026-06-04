@@ -11,6 +11,7 @@ import 'shop_page.dart';
 import 'profile_page.dart';
 import 'package:image_picker/image_picker.dart';
 import 'item_scanned_page.dart';
+import '../services/goals_service.dart';
 
 class GoalsPage extends StatefulWidget {
 
@@ -24,56 +25,46 @@ class _GoalsPageState extends State<GoalsPage> {
 
   int ecoPoints = 0;
 
+  String badge = "";
+
+  String nextBadge = "";
+
+  double progress = 0.0;
+
   @override
   void initState() {
     super.initState();
-    loadPoints();
+    loadGoals();
   }
 
-  Future<void> loadPoints() async {
+  Future<void> loadGoals() async {
 
     try {
 
-      final response = await http.get(
-        Uri.parse(
-          "http://192.168.100.7:8000/points/${UserSession.username}",
-        ),
-      );
-
-      final data = jsonDecode(response.body);
+      final data =
+      await GoalsService.getGoals();
 
       setState(() {
 
-        ecoPoints = data["points"] ?? 0;
+        ecoPoints =
+            data["points"] ?? 0;
+
+        badge =
+            data["badge"] ?? "";
+
+        nextBadge =
+            data["next_badge"] ?? "";
+
+        progress =
+            (data["progress"] as num)
+                .toDouble();
       });
 
     } catch (e) {
 
-      print("LOAD POINT ERROR");
+      print("LOAD GOALS ERROR");
       print(e);
     }
-  }
-
-  String getBadge() {
-
-    if (ecoPoints >= 500) {
-      return "Eco-Champion";
-    }
-
-    if (ecoPoints >= 200) {
-      return "Eco-Hero";
-    }
-
-    return "Eco-Starter";
-  }
-
-  double getProgress() {
-
-    if (ecoPoints >= 500) {
-      return 1.0;
-    }
-
-    return ecoPoints / 500;
   }
 
   String getItemImage(String prediction) {
@@ -83,6 +74,41 @@ class _GoalsPageState extends State<GoalsPage> {
         .replaceAll(" ", "_");
 
     return "assets/images/$fileName.png";
+  }
+
+  String getMainBadge() {
+
+    if (ecoPoints >= 500) {
+      return "assets/icon/Eco-Champion_Badge.png";
+    }
+
+    if (ecoPoints >= 200) {
+      return "assets/icon/Eco-Hero_Badge.png";
+    }
+
+    return "assets/icon/Eco-Starter_Badge.png";
+  }
+
+  String getStarterBadge() {
+    return "assets/icon/Eco-Starter_Badge.png";
+  }
+
+  String getHeroBadge() {
+
+    if (ecoPoints >= 200) {
+      return "assets/icon/Eco-Hero_Badge.png";
+    }
+
+    return "assets/icon/Eco-Hero_Locked_Badge.png";
+  }
+
+  String getChampionBadge() {
+
+    if (ecoPoints >= 500) {
+      return "assets/icon/Eco-Champion_Badge.png";
+    }
+
+    return "assets/icon/Eco-Champion_Locked_Badge.png";
   }
 
   @override
@@ -126,14 +152,14 @@ class _GoalsPageState extends State<GoalsPage> {
                       child: Column(
                         children: [
                           Image.asset(
-                            "assets/icon/Eco-Starter_Badge.png",
+                            getMainBadge(),
                             height: 80,
                           ),
 
                           const SizedBox(height: 10),
 
                           Text(
-                            getBadge(),
+                            badge,
                             style: const TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 18,
@@ -151,7 +177,7 @@ class _GoalsPageState extends State<GoalsPage> {
                                 Container(height: 15, color: Colors.grey[300]),
 
                                 FractionallySizedBox(
-                                  widthFactor: getProgress(),
+                                  widthFactor: progress,
 
                                   child: Container(
                                     height: 15,
@@ -162,7 +188,7 @@ class _GoalsPageState extends State<GoalsPage> {
                                 Positioned.fill(
                                   child: Center(
                                     child: Text(
-                                      "$ecoPoints / 500 EXP",
+                                      "$ecoPoints EXP",
                                       style: TextStyle(
                                         fontSize: 10,
                                         color: Colors.white,
@@ -247,17 +273,17 @@ class _GoalsPageState extends State<GoalsPage> {
 
                               children: [
                                 badgeItem(
-                                  "assets/icon/Eco-Starter_Badge.png",
+                                  getStarterBadge(),
                                   "Eco-Starter",
                                 ),
 
                                 badgeItem(
-                                  "assets/icon/Eco-Hero_Locked_Badge.png",
+                                  getHeroBadge(),
                                   "Eco-Hero",
                                 ),
 
                                 badgeItem(
-                                  "assets/icon/Eco-Champion_Locked_Badge.png",
+                                  getChampionBadge(),
                                   "Eco-Champion",
                                 ),
                               ],
