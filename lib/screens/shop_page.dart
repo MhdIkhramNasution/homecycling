@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import '../services/user_session.dart';
 import 'package:flutter/material.dart';
 import 'buy_voucher_page.dart';
+import '../services/voucher_service.dart';
 import 'goals_page.dart';
 import 'reedem_history_page.dart';
 
@@ -10,10 +11,45 @@ class ShopPage extends StatefulWidget {
   const ShopPage({super.key});
 
   @override
+
   State<ShopPage> createState() => _ShopPageState();
 }
 
 class _ShopPageState extends State<ShopPage> {
+  List<dynamic> vouchers = [];
+
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+
+    loadVouchers();
+  }
+
+  Future<void> loadVouchers() async {
+
+    try {
+
+      final data =
+      await VoucherService.getVouchers();
+
+      setState(() {
+
+        vouchers = data;
+
+        isLoading = false;
+      });
+
+    } catch (e) {
+
+      print(e);
+
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
 
   Future<void> redeemReward(
       BuildContext context,
@@ -97,34 +133,38 @@ class _ShopPageState extends State<ShopPage> {
             ),
           ),
 
-          /// ================= VOUCHER LIST (SCROLL ONLY HERE) =================
+          /// ================= VOUCHER LIST =================
           Expanded(
-            child: ListView(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              children: [
-                voucherItem(
-                  context,
-                  "Voucher Rp5.000",
-                  "Discount voucher Rp5.000",
-                  "50",
-                ),
+            child: isLoading
 
-                voucherItem(
-                  context,
-                  "Voucher Rp10.000",
-                  "Discount voucher Rp10.000",
-                  "100",
-                ),
+                ? const Center(
+              child: CircularProgressIndicator(),
+            )
 
-                voucherItem(
-                  context,
-                  "Voucher Rp20.000",
-                  "Discount voucher Rp20.000",
-                  "200",
-                ),
+                : ListView.builder(
 
-                const SizedBox(height: 80),
-              ],
+              padding: const EdgeInsets.symmetric(
+                horizontal: 20,
+              ),
+
+              itemCount: vouchers.length,
+
+              itemBuilder: (context, index) {
+
+                final voucher =
+                vouchers[index];
+
+                return voucherItem(
+
+                  context,
+
+                  voucher["title"],
+
+                  voucher["description"],
+
+                  voucher["points"].toString(),
+                );
+              },
             ),
           ),
 
