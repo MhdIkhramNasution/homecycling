@@ -33,7 +33,7 @@ class _RedeemHistoryPageState
       final response = await http.get(
 
         Uri.parse(
-          "http://192.168.100.7:8000/reward-history/${UserSession.username}",
+            "http://192.168.100.7:8000/redeem-history/${UserSession.username}"
         ),
       );
 
@@ -186,57 +186,37 @@ class _RedeemHistoryPageState
 
             /// LIST HISTORY
             Expanded(
-
               child: isLoading
-
                   ? const Center(
                 child:
                 CircularProgressIndicator(),
               )
-
                   : rewards.isEmpty
-
                   ? const Center(
                 child: Text(
                   "No redeem history yet",
                 ),
               )
-
                   : ListView.builder(
-
                 itemCount:
                 rewards.length,
-
                 itemBuilder:
                     (context, index) {
-
                   final reward =
                   rewards[index];
-
                   return voucherItem(
-
                     context,
-
                     "assets/images/voucher_a_images.png",
-
-                    reward["reward_name"]
-                        .toString(),
-
-                    reward["redeemed_at"]
-                        .toString(),
-
+                    reward["voucher_name"].toString(),
+                    reward["redeemed_at"].toString().split(" ")
+                        .first,
                     "Redeemed",
-
-                    "Used",
-
-                    const Color(
-                      0xFF577E24,
-                    ),
-
+                    reward["status"].toString(),
+                    reward["status"] == "available"
+                        ? const Color(0xFF577E24)
+                        : Colors.grey,
                     "assets/images/voucher_a_full_images.png",
-
-                    reward["points_used"]
-                        .toString(),
+                    reward["points_used"].toString(),
                   );
                 },
               ),
@@ -341,20 +321,19 @@ class _RedeemHistoryPageState
     return GestureDetector(
 
       onTap: () {
-
         Navigator.push(
-
           context,
-
           MaterialPageRoute(
+            builder: (_) => VoucherDetailPage(
 
-            builder: (_) =>
-                VoucherDetailPage(
+              voucherId: 0,
 
-                  title: title,
+              title: title,
 
-                  image: detailImage,
-                ),
+              image: detailImage,
+
+              points: 0,
+            ),
           ),
         );
       },

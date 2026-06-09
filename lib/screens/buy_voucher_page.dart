@@ -1,15 +1,76 @@
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import '../services/user_session.dart';
 import 'package:flutter/material.dart';
 import 'shop_page.dart';
 
 class BuyVoucherPage extends StatefulWidget {
-  const BuyVoucherPage({super.key});
+  final int voucherId;
+  final String title;
+  final int points;
+  final String image;
+
+  const BuyVoucherPage({
+    super.key,
+    required this.voucherId,
+    required this.title,
+    required this.points,
+    required this.image,
+  });
 
   @override
-  State<BuyVoucherPage> createState() => _BuyVoucherPageState();
+  State<BuyVoucherPage> createState() =>
+      _BuyVoucherPageState();
 }
 
 class _BuyVoucherPageState extends State<BuyVoucherPage> {
   bool isChecked = false;
+
+  Future<void> redeemVoucher() async {
+
+    try {
+
+      final response = await http.post(
+
+        Uri.parse(
+          "http://192.168.100.7:8000/redeem-voucher",
+        ),
+
+        headers: {
+          "Content-Type": "application/json",
+        },
+
+        body: jsonEncode({
+
+          "username":
+          UserSession.username,
+
+          "voucher_id":
+          widget.voucherId,
+        }),
+      );
+
+      final data =
+      jsonDecode(response.body);
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context)
+          .showSnackBar(
+
+        SnackBar(
+          content: Text(
+            data["message"] ??
+                data["status"],
+          ),
+        ),
+      );
+
+    } catch (e) {
+
+      print(e);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -110,13 +171,10 @@ class _BuyVoucherPageState extends State<BuyVoucherPage> {
                     /// ================= BUTTON =================
                     GestureDetector(
                       onTap: isChecked
-                          ? () {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text("Voucher Purchased!"),
-                                ),
-                              );
-                            }
+                          ? () async {
+                        await redeemVoucher();
+                        Navigator.pop(context);
+                      }
                           : null,
                       child: Container(
                         width: double.infinity,

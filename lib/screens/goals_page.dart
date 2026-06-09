@@ -49,8 +49,18 @@ class _GoalsPageState extends State<GoalsPage> {
         ecoPoints =
             data["points"] ?? 0;
 
-        badge =
-            data["badge"] ?? "";
+        if (ecoPoints >= 1000) {
+
+          badge = "Eco Champion";
+
+        } else if (ecoPoints >= 500) {
+
+          badge = "Eco Hero";
+
+        } else {
+
+          badge = "Eco Starter";
+        }
 
         nextBadge =
             data["next_badge"] ?? "";
@@ -78,11 +88,11 @@ class _GoalsPageState extends State<GoalsPage> {
 
   String getMainBadge() {
 
-    if (ecoPoints >= 500) {
+    if (ecoPoints >= 1000) {
       return "assets/icon/Eco-Champion_Badge.png";
     }
 
-    if (ecoPoints >= 200) {
+    if (ecoPoints >= 500) {
       return "assets/icon/Eco-Hero_Badge.png";
     }
 
@@ -95,7 +105,7 @@ class _GoalsPageState extends State<GoalsPage> {
 
   String getHeroBadge() {
 
-    if (ecoPoints >= 200) {
+    if (ecoPoints >= 500) {
       return "assets/icon/Eco-Hero_Badge.png";
     }
 
@@ -104,7 +114,7 @@ class _GoalsPageState extends State<GoalsPage> {
 
   String getChampionBadge() {
 
-    if (ecoPoints >= 500) {
+    if (ecoPoints >= 1000) {
       return "assets/icon/Eco-Champion_Badge.png";
     }
 

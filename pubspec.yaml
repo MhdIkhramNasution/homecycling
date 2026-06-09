@@ -10,7 +10,7 @@ environment:
 dependencies:
   image_picker: ^1.0.7
   http: ^1.2.0
-  tflite_flutter: 0.11.0
+  tflite_flutter: ^0.12.1
   image: ^4.1.7
   shared_preferences: ^2.2.2
   flutter:

@@ -1,14 +1,69 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import '../services/user_session.dart';
 
 class VoucherDetailPage extends StatelessWidget {
+  final int voucherId;
   final String title;
   final String image;
+  final int points;
 
   const VoucherDetailPage({
     super.key,
+    required this.voucherId,
     required this.title,
     required this.image,
+    required this.points,
   });
+
+  Future<void> redeemVoucher(
+      BuildContext context,
+      ) async {
+
+    try {
+
+      final response = await http.post(
+
+        Uri.parse(
+          "http://192.168.100.7:8000/redeem-voucher",
+        ),
+
+        headers: {
+          "Content-Type": "application/json",
+        },
+
+        body: jsonEncode({
+
+          "username":
+          UserSession.username,
+
+          "voucher_id":
+          voucherId,
+        }),
+      );
+
+      final data =
+      jsonDecode(response.body);
+
+      ScaffoldMessenger.of(context)
+          .showSnackBar(
+
+        SnackBar(
+
+          content: Text(
+
+            data["message"] ??
+                data["status"],
+          ),
+        ),
+      );
+
+    } catch (e) {
+
+      print(e);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -35,11 +90,18 @@ class VoucherDetailPage extends StatelessWidget {
             /// IMAGE
             ClipRRect(
               borderRadius: BorderRadius.circular(20),
-              child: Image.asset(
-                image,
-                width: double.infinity,
-                height: 180,
-                fit: BoxFit.cover,
+              child: Builder(
+                builder: (context) {
+
+                  print("IMAGE PATH = $image");
+
+                  return Image.asset(
+                    image,
+                    width: double.infinity,
+                    height: 180,
+                    fit: BoxFit.cover,
+                  );
+                },
               ),
             ),
 
@@ -155,6 +217,35 @@ class VoucherDetailPage extends StatelessWidget {
                   rowDot("Cannot be combined with other promotions"),
 
                 ],
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            SizedBox(
+
+              width: double.infinity,
+
+              child: ElevatedButton(
+
+                style: ElevatedButton.styleFrom(
+
+                  backgroundColor:
+                  const Color(0xFF577E24),
+
+                  foregroundColor:
+                  Colors.white,
+                ),
+
+                onPressed: () {
+
+                  redeemVoucher(
+                    context,
+                  );
+                },
+
+                child: Text(
+                  "Redeem ($points pts)",
+                ),
               ),
             ),
 

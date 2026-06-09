@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:flutter/services.dart';
@@ -6,58 +7,98 @@ import 'package:image/image.dart' as img;
 import 'package:tflite_flutter/tflite_flutter.dart';
 
 class TFLiteService {
+  static Interpreter? _interpreter;
 
-  static late Interpreter interpreter;
   static List<String> labels = [];
 
-  // Model input size (confirmed from model_float32.tflite)
   static const int inputSize = 224;
+
+  static const double confidenceThreshold = 0.50;
 
   // ================= LOAD MODEL =================
 
   static Future<void> loadModel() async {
-    print("INSIDE LOAD MODEL");
+    try {
+      print("LOADING MODEL...");
 
-    interpreter = await Interpreter.fromAsset(
-      'assets/model/model_float32.tflite',
-    );
+      _interpreter?.close();
 
-    print("INTERPRETER CREATED");
-
-    final labelData = await rootBundle.loadString(
-      'assets/model/labels.txt',
-    );
-
-    labels = labelData
-        .split('\n')
-        .where((e) => e.trim().isNotEmpty)
-        .toList();
-
-    print("LABELS LOADED: ${labels.length}");
-
-    // Sanity check: model output shape is [1, 36]
-    final outputShape = interpreter.getOutputTensor(0).shape;
-    if (outputShape[1] != labels.length) {
-      print(
-        "WARNING: Model output has ${outputShape[1]} classes "
-            "but labels.txt has ${labels.length} entries. "
-            "Prediction results may be incorrect.",
+      _interpreter = await Interpreter.fromAsset(
+        "assets/model/model_float32.tflite",
       );
+
+      print("MODEL LOADED");
+
+      final labelData = await rootBundle.loadString(
+        "assets/model/labels.txt",
+      );
+
+      labels = labelData
+          .split("\n")
+          .where((e) => e.trim().isNotEmpty)
+          .toList();
+
+      print("LABEL COUNT: ${labels.length}");
+
+      print(
+        "INPUT SHAPE: ${_interpreter!.getInputTensor(0).shape}",
+      );
+
+      print(
+        "OUTPUT SHAPE: ${_interpreter!.getOutputTensor(0).shape}",
+      );
+
+      print(
+        "INPUT TYPE: ${_interpreter!.getInputTensor(0).type}",
+      );
+
+      print(
+        "OUTPUT TYPE: ${_interpreter!.getOutputTensor(0).type}",
+      );
+    } catch (e) {
+      print("LOAD MODEL ERROR");
+      print(e);
+      rethrow;
     }
   }
 
   // ================= PREDICT =================
 
-  static Future<Map<String, dynamic>> predict(File imageFile) async {
-    if (labels.isEmpty) {
-      throw Exception("Labels belum dimuat. Panggil loadModel() terlebih dahulu.");
+  static Future<Map<String, dynamic>> predict(
+      File imageFile,
+      ) async {
+    if (_interpreter == null) {
+      throw Exception("Model belum dimuat");
     }
 
     final bytes = await imageFile.readAsBytes();
+
     img.Image? image = img.decodeImage(bytes);
+
     if (image == null) {
-      throw Exception("Gagal mendekode gambar.");
+      throw Exception("Gagal membaca gambar");
     }
+
+    // ================= FIX ORIENTATION =================
+
+    image = img.bakeOrientation(image);
+
+    // ================= CENTER CROP =================
+
+    final cropSize =
+    image.width < image.height
+        ? image.width
+        : image.height;
+
+    image = img.copyCrop(
+      image,
+      x: (image.width - cropSize) ~/ 2,
+      y: (image.height - cropSize) ~/ 2,
+      width: cropSize,
+      height: cropSize,
+    );
+
+    // ================= RESIZE =================
 
     image = img.copyResize(
       image,
@@ -66,57 +107,192 @@ class TFLiteService {
       interpolation: img.Interpolation.linear,
     );
 
-    final inputBytes = Float32List(1 * inputSize * inputSize * 3);
-    int idx = 0;
+    final input = Float32List(
+      1 * inputSize * inputSize * 3,
+    );
+
+    int index = 0;
 
     for (int y = 0; y < inputSize; y++) {
       for (int x = 0; x < inputSize; x++) {
         final pixel = image.getPixel(x, y);
-        inputBytes[idx++] = (pixel.r / 127.5) - 1.0;
-        inputBytes[idx++] = (pixel.g / 127.5) - 1.0;
-        inputBytes[idx++] = (pixel.b / 127.5) - 1.0;
+
+        // Normalisasi MobileNet
+
+        input[index++] =
+            (pixel.r / 127.5) - 1.0;
+
+        input[index++] =
+            (pixel.g / 127.5) - 1.0;
+
+        input[index++] =
+            (pixel.b / 127.5) - 1.0;
       }
     }
 
-    final input = inputBytes.buffer.asFloat32List().reshape([1, inputSize, inputSize, 3]);
+    final inputTensor = input.reshape([
+      1,
+      inputSize,
+      inputSize,
+      3,
+    ]);
 
-    final outputShape = interpreter.getOutputTensor(0).shape; // [1, 36]
-    final numClasses = outputShape[1];
-    final outputBuffer = [List<double>.filled(numClasses, 0.0)];
+    final outputShape =
+        _interpreter!
+            .getOutputTensor(0)
+            .shape;
 
-    print("INPUT SHAPE : ${interpreter.getInputTensor(0).shape}");
-    print("OUTPUT SHAPE: ${interpreter.getOutputTensor(0).shape}");
-    print("LABEL COUNT : ${labels.length}");
-    print("BEFORE RUN");
+    final numClasses =
+    outputShape[1];
 
-    interpreter.run(input, outputBuffer);
+    final rawOutput =
+    Float32List(numClasses);
 
-    print("AFTER RUN");
-    print(outputBuffer);
+    final output =
+    rawOutput.reshape([
+      1,
+      numClasses,
+    ]);
+
+    _interpreter!.run(
+      inputTensor,
+      output,
+    );
+    print("RAW OUTPUT:");
+    print(rawOutput);
+
+    final probabilities =
+    _softmax(rawOutput);
+
+    // ================= DEBUG =================
+
+    print("========== TOP PREDICTION ==========");
+
+    for (int i = 0; i < labels.length; i++) {
+      print(
+        "${labels[i]} : ${(probabilities[i] * 100).toStringAsFixed(2)}%",
+      );
+    }
+
+    // ================= FIND BEST =================
 
     int maxIndex = 0;
-    double maxConfidence = outputBuffer[0][0];
 
-    for (int i = 1; i < numClasses; i++) {
-      if (outputBuffer[0][i] > maxConfidence) {
-        maxConfidence = outputBuffer[0][i];
+    double maxConfidence =
+    probabilities[0];
+
+    for (int i = 1;
+    i < probabilities.length;
+    i++) {
+      if (probabilities[i] >
+          maxConfidence) {
+        maxConfidence =
+        probabilities[i];
+
         maxIndex = i;
       }
     }
 
-    print("MAX INDEX     : $maxIndex");
-    print("MAX CONFIDENCE: $maxConfidence");
+    final prediction =
+    labels[maxIndex];
 
-    if (maxIndex >= labels.length) {
-      throw Exception(
-        "Index prediksi ($maxIndex) melebihi jumlah label (${labels.length}). "
-            "Pastikan labels.txt memiliki tepat $numClasses entri.",
-      );
-    }
+    final reliable =
+        maxConfidence >=
+            confidenceThreshold;
+
+    print(
+      "FINAL: $prediction (${(maxConfidence * 100).toStringAsFixed(2)}%)",
+    );
 
     return {
-      "prediction": labels[maxIndex],
-      "confidence": maxConfidence,
+      "prediction":
+      reliable
+          ? prediction
+          : "Tidak dikenali",
+
+      "confidence":
+      maxConfidence,
+
+      "reliable":
+      reliable,
+
+      "top3":
+      _getTopK(
+        probabilities,
+        3,
+      ),
     };
+  }
+
+  // ================= SOFTMAX =================
+
+  static List<double> _softmax(
+      List<double> logits,
+      ) {
+    final maxValue =
+    logits.reduce(max);
+
+    final exps =
+    logits
+        .map(
+          (e) =>
+          exp(e - maxValue),
+    )
+        .toList();
+
+    final sum =
+    exps.reduce(
+          (a, b) => a + b,
+    );
+
+    return exps
+        .map(
+          (e) => e / sum,
+    )
+        .toList();
+  }
+
+  // ================= TOP K =================
+
+  static List<Map<String, dynamic>>
+  _getTopK(
+      List<double> scores,
+      int k,
+      ) {
+    final indexed =
+    List.generate(
+      scores.length,
+          (i) =>
+          MapEntry(
+            i,
+            scores[i],
+          ),
+    );
+
+    indexed.sort(
+          (a, b) =>
+          b.value.compareTo(
+            a.value,
+          ),
+    );
+
+    return indexed
+        .take(k)
+        .map(
+          (e) => {
+        "label":
+        labels[e.key],
+        "confidence":
+        e.value,
+      },
+    )
+        .toList();
+  }
+
+  // ================= DISPOSE =================
+
+  static void dispose() {
+    _interpreter?.close();
+    _interpreter = null;
   }
 }
