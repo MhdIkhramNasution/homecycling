@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import '../services/user_session.dart';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -52,6 +55,7 @@ class _HomePageState extends State<HomePage> {
 
   /// ================= UPLOAD IMAGE TO AI =================
   Future<void> uploadImage(String imagePath) async {
+    print("UPLOAD IMAGE CALLED");
 
     final result = await TFLiteService.predict(
       File(imagePath),
@@ -62,6 +66,33 @@ class _HomePageState extends State<HomePage> {
 
     double confidence =
     (result["confidence"] ?? 0).toDouble();
+
+    await http.post(
+
+      Uri.parse(
+        "http://192.168.100.7:8000/scan/save",
+      ),
+
+      headers: {
+        "Content-Type":
+        "application/json",
+      },
+
+      body: jsonEncode({
+
+        "username":
+        UserSession.username,
+
+        "image":
+        imagePath,
+
+        "prediction":
+        prediction,
+
+        "confidence":
+        confidence.toString(),
+      }),
+    );
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(

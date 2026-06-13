@@ -49,7 +49,7 @@ class _GoalsPageState extends State<GoalsPage> {
         ecoPoints =
             data["points"] ?? 0;
 
-        if (ecoPoints >= 1000) {
+        if (ecoPoints >= 900) {
 
           badge = "Eco Champion";
 
@@ -88,7 +88,7 @@ class _GoalsPageState extends State<GoalsPage> {
 
   String getMainBadge() {
 
-    if (ecoPoints >= 1000) {
+    if (ecoPoints >= 900) {
       return "assets/icon/Eco-Champion_Badge.png";
     }
 
@@ -109,7 +109,7 @@ class _GoalsPageState extends State<GoalsPage> {
       return "assets/icon/Eco-Hero_Badge.png";
     }
 
-    return "assets/icon/Eco-Hero_Locked_Badge.png";
+    return "assets/icon/Eco-Hero_Badge.png";
   }
 
   String getChampionBadge() {
@@ -118,7 +118,7 @@ class _GoalsPageState extends State<GoalsPage> {
       return "assets/icon/Eco-Champion_Badge.png";
     }
 
-    return "assets/icon/Eco-Champion_Locked_Badge.png";
+    return "assets/icon/Eco-Champion_Badge.png";
   }
 
   @override

@@ -213,7 +213,7 @@ class ItemScannedPage extends StatelessWidget {
 
                           "image": inventoryImage,
 
-                          "expiry_days": 5,
+                          "expiry_days": 7,
 
                           "status": "Fresh",
                         }),

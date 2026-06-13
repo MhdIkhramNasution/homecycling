@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import '../services/inventory_service.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import '../services/user_session.dart';
 
 class ManualAddPage extends StatefulWidget {
   const ManualAddPage({super.key});
@@ -24,22 +27,72 @@ class _ManualAddPageState extends State<ManualAddPage> {
 
   Future<void> saveItem() async {
 
-    if (itemController.text.isEmpty) return;
+    if (itemController.text.isEmpty) {
+      return;
+    }
 
-    await InventoryService.addItem({
-      "image": "assets/images/apple.png",
-      "title": itemController.text,
-      "subtitle": "Manual Added",
-      "badge": "NEW",
-      "status": "Fresh",
-      "stock": 1,
-      "color": Colors.green.value,
-      "progress": 1.0,
-    });
+    try {
 
-    if (!mounted) return;
+      final response = await http.post(
 
-    Navigator.pop(context);
+        Uri.parse(
+          "http://192.168.100.7:8000/inventory/manual-add",
+        ),
+
+        headers: {
+          "Content-Type":
+          "application/json",
+        },
+
+        body: jsonEncode({
+
+          "username":
+          UserSession.username,
+
+          "item_name":
+          itemController.text,
+
+          "category":
+          categoryController.text,
+
+          "expiry_date":
+          dateController.text,
+
+          "notes":
+          notesController.text,
+        }),
+      );
+
+      print(response.body);
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context)
+          .showSnackBar(
+
+        const SnackBar(
+          content: Text(
+            "Item berhasil ditambahkan",
+          ),
+        ),
+      );
+
+      Navigator.pop(context);
+
+    } catch (e) {
+
+      print(e);
+
+      ScaffoldMessenger.of(context)
+          .showSnackBar(
+
+        const SnackBar(
+          content: Text(
+            "Gagal menambahkan item",
+          ),
+        ),
+      );
+    }
   }
 
   @override

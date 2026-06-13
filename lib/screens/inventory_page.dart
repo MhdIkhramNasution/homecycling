@@ -227,7 +227,9 @@ class _InventoryPageState extends State<InventoryPage> {
                     MaterialPageRoute(
                       builder: (_) => const ManualAddPage(),
                     ),
-                  );
+                  ).then((_) {
+                    loadInventory();
+                  });
                 },
 
                 child: Container(
@@ -800,6 +802,7 @@ class _InventoryPageState extends State<InventoryPage> {
                   var item = filteredItems[index];
 
                   return inventoryItem(
+                    item["id"],
                     index,
                     item["image"],
                     item["title"],
@@ -876,6 +879,7 @@ class _InventoryPageState extends State<InventoryPage> {
   }
 
   Widget inventoryItem(
+      int itemId,
       int index,
       image,
       title,
@@ -888,14 +892,29 @@ class _InventoryPageState extends State<InventoryPage> {
     return InkWell(
       borderRadius: BorderRadius.circular(20),
 
-      onTap: () {
-        showModalBottomSheet(
+      onTap: () async {
+
+        final result =
+        await showModalBottomSheet(
+
           context: context,
           backgroundColor: Colors.transparent,
           isScrollControlled: true,
 
-          builder: (_) => DetailItemPage(title: title, image: image),
+          builder: (_) => DetailItemPage(
+            itemId: itemId,
+            title: title,
+            image: image,
+            stock: stock,
+            expiryDays: int.parse(
+              badge.toString().split(" ")[0],
+            ),
+          ),
         );
+
+        if (result == true) {
+          loadInventory();
+        }
       },
 
       child: Container(
