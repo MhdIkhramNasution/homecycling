@@ -12,6 +12,10 @@ import 'item_scanned_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/auth_service.dart';
 import '../services/tflite_service.dart';
+import '../services/dashboard_service.dart';
+import '../services/history_service.dart';
+import 'package:homecycling/screens/notification_page.dart';
+import '../services/notification_service.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -23,6 +27,19 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   String username = "Username";
   String photo = "";
+  int totalItems = 0;
+  List<dynamic> historyList = [];
+  int notificationCount = 0;
+  int freshItems = 0;
+  int almostExpiredItems = 0;
+  int expiredItems = 0;
+  int ecoPoints = 0;
+  int badgeCount = 0;
+
+  double progressValue = 0;
+
+  String badgeImage =
+      "assets/icon/Eco-Starter_Badge.png";
   String getItemImage(String prediction) {
 
     final fileName = prediction
@@ -37,6 +54,9 @@ class _HomePageState extends State<HomePage> {
     super.initState();
 
     loadProfile();
+    loadDashboard();
+    loadHistory();
+    loadNotificationCount();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       checkPopup();
@@ -51,6 +71,114 @@ class _HomePageState extends State<HomePage> {
       username = data["username"]!;
       photo = data["photo"]!;
     });
+  }
+
+  ///================== LOAD DASHBOARD ==============
+  Future<void> loadDashboard() async {
+
+    try {
+
+      final data =
+      await DashboardService
+          .getDashboardStats();
+
+      setState(() {
+
+        totalItems =
+            data["total_items"] ?? 0;
+
+        freshItems =
+            data["fresh"] ?? 0;
+
+        almostExpiredItems =
+            data["almost_expired"] ?? 0;
+
+        expiredItems =
+            data["expired"] ?? 0;
+
+        ecoPoints =
+            data["points"] ?? 0;
+
+        badgeCount =
+            data["badges"] ?? 0;
+
+        // ================= BADGE =================
+
+        if (ecoPoints >= 150) {
+
+          badgeImage =
+          "assets/icon/Eco-Champion_Badge.png";
+
+          progressValue =
+              (ecoPoints / 300)
+                  .clamp(0.0, 1.0);
+
+        } else if (ecoPoints >= 50) {
+
+          badgeImage =
+          "assets/icon/Eco-Hero_Badge.png";
+
+          progressValue =
+              (ecoPoints / 150)
+                  .clamp(0.0, 1.0);
+
+        } else {
+
+          badgeImage =
+          "assets/icon/Eco-Starter_Badge.png";
+
+          progressValue =
+              (ecoPoints / 50)
+                  .clamp(0.0, 1.0);
+        }
+      });
+
+    } catch (e) {
+
+      print(e);
+    }
+  }
+
+  ///================== LOAD HISTORY ==============
+
+  Future<void> loadHistory() async {
+
+    try {
+
+      final data =
+      await HistoryService
+          .getHistory();
+
+      setState(() {
+
+        historyList = data;
+      });
+
+    } catch (e) {
+
+      print(e);
+    }
+  }
+
+  ///================== LOAD NOTIFICATION ==============
+  Future<void> loadNotificationCount() async {
+
+    try {
+
+      final data =
+      await NotificationService
+          .getNotifications();
+
+      setState(() {
+
+        notificationCount =
+            data.length;
+      });
+
+    } catch (e) {
+
+      print(e);
+    }
   }
 
   /// ================= UPLOAD IMAGE TO AI =================
@@ -207,31 +335,116 @@ class _HomePageState extends State<HomePage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
+
+                        mainAxisAlignment:
+                        MainAxisAlignment.spaceBetween,
+
                         children: [
-                          CircleAvatar(
-                            radius: 25,
-                            backgroundColor: Colors.grey,
-                            backgroundImage: photo.isNotEmpty
-                                ? FileImage(File(photo))
-                                : null,
-                            child: photo.isEmpty
-                                ? const Icon(Icons.person, color: Colors.white)
-                                : null,
+
+                          Row(
+
+                            children: [
+
+                              CircleAvatar(
+                                radius: 25,
+                                backgroundColor: Colors.grey,
+
+                                backgroundImage:
+                                photo.isNotEmpty
+                                    ? FileImage(
+                                  File(photo),
+                                )
+                                    : null,
+
+                                child: photo.isEmpty
+                                    ? const Icon(
+                                  Icons.person,
+                                  color: Colors.white,
+                                )
+                                    : null,
+                              ),
+
+                              const SizedBox(width: 10),
+
+                              Column(
+                                crossAxisAlignment:
+                                CrossAxisAlignment.start,
+
+                                children: [
+
+                                  Text(
+                                    "Hi! $username",
+
+                                    style: const TextStyle(
+                                      fontWeight:
+                                      FontWeight.bold,
+                                      fontSize: 18,
+                                    ),
+                                  ),
+
+                                  const Text(
+                                    "11 March 2026",
+                                  ),
+                                ],
+                              ),
+                            ],
                           ),
 
-                          const SizedBox(width: 10),
-
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                          Stack(
                             children: [
-                              Text(
-                                "Hi! $username",
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 18,
+
+                              IconButton(
+                                icon: const Icon(
+                                  Icons.notifications,
+                                  color: Color(0xFF74A830),
+                                  size: 28,
                                 ),
+
+                                onPressed: () async {
+
+                                  await Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) =>
+                                      const NotificationPage(),
+                                    ),
+                                  );
+
+                                  loadNotificationCount();
+                                },
                               ),
-                              const Text("11 March 2026"),
+
+                              if (notificationCount > 0)
+
+                                Positioned(
+                                  right: 8,
+                                  top: 8,
+
+                                  child: Container(
+                                    padding:
+                                    const EdgeInsets.all(4),
+
+                                    decoration:
+                                    const BoxDecoration(
+                                      color: Colors.red,
+                                      shape: BoxShape.circle,
+                                    ),
+
+                                    child: Text(
+                                      notificationCount
+                                          .toString(),
+
+                                      style:
+                                      const TextStyle(
+                                        color:
+                                        Colors.white,
+                                        fontSize: 10,
+                                        fontWeight:
+                                        FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                ),
                             ],
                           ),
                         ],
@@ -266,18 +479,18 @@ class _HomePageState extends State<HomePage> {
                                     ),
 
                                     FractionallySizedBox(
-                                      widthFactor: 0.7,
+                                      widthFactor: progressValue,
                                       child: Container(
                                         height: 20,
                                         color: const Color(0xFF5E7D1E),
                                       ),
                                     ),
 
-                                    const Positioned.fill(
+                                    Positioned.fill(
                                       child: Center(
                                         child: Text(
-                                          "70/100",
-                                          style: TextStyle(
+                                          "$ecoPoints Points",
+                                          style: const TextStyle(
                                             color: Colors.white,
                                             fontWeight: FontWeight.bold,
                                           ),
@@ -292,7 +505,7 @@ class _HomePageState extends State<HomePage> {
                             const SizedBox(width: 10),
 
                             Image.asset(
-                              "assets/icon/Eco-Champion_Badge.png",
+                              badgeImage,
                               width: 40,
                             ),
                           ],
@@ -369,7 +582,7 @@ class _HomePageState extends State<HomePage> {
                       child: menuCard(
                         "assets/icon/inventory_dashboard.png",
                         "Inventory",
-                        "Your food list",
+                        "$totalItems Items Stored",
                       ),
                     ),
                   ),
@@ -387,7 +600,7 @@ class _HomePageState extends State<HomePage> {
                       child: menuCard(
                         "assets/icon/eco_point_dashboard.png",
                         "Eco Points",
-                        "Your rewards",
+                        "$ecoPoints Points",
                       ),
                     ),
                   ),
@@ -402,13 +615,44 @@ class _HomePageState extends State<HomePage> {
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
 
-              const SizedBox(height: 10),
+              historyList.isEmpty
 
-              historyItem(
-                "assets/icon/chest_dashboard.png",
-                "Added Item via Camera",
-                "Just now - Inventory",
+                  ? const Padding(
+                padding: EdgeInsets.all(20),
+
+                child: Center(
+                  child: Text(
+                    "No recent activity",
+                  ),
+                ),
+              )
+
+                  : ListView.builder(
+
+                shrinkWrap: true,
+
+                physics:
+                const NeverScrollableScrollPhysics(),
+
+                itemCount: historyList.length,
+
+                itemBuilder: (context, index) {
+
+                  final item =
+                  historyList[index];
+
+                  return historyItem(
+
+                    "assets/icon/chest_dashboard.png",
+
+                    item["activity"],
+
+                    item["time"],
+                  );
+                },
               ),
+
+              const SizedBox(height: 10),
             ],
           ),
         ),
@@ -518,6 +762,31 @@ class _HomePageState extends State<HomePage> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget statItem(
+      String value,
+      String title,
+      Color color,
+      ) {
+
+    return Column(
+
+      children: [
+
+        Text(
+          value,
+
+          style: TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+            color: color,
+          ),
+        ),
+
+        Text(title),
+      ],
     );
   }
 
