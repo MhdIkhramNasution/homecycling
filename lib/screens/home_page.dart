@@ -283,21 +283,52 @@ class _HomePageState extends State<HomePage> {
 
   /// ================= POPUP CONTROL =================
   void checkPopup() async {
-    final prefs = await SharedPreferences.getInstance();
 
-    bool alreadyShown = prefs.getBool("popupShown") ?? false;
+    final prefs =
+    await SharedPreferences.getInstance();
 
-    if (!alreadyShown) {
-      await Future.delayed(const Duration(milliseconds: 300));
+    bool alreadyShown =
+        prefs.getBool("popupShown") ?? false;
+
+    if (alreadyShown) return;
+
+    try {
+
+      final notifications =
+      await NotificationService
+          .getNotifications();
+
+      if (notifications.isEmpty) {
+        return;
+      }
+
       if (!mounted) return;
 
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (_) => const ExpiringPopup(),
+      await Future.delayed(
+        const Duration(milliseconds: 300),
       );
 
-      await prefs.setBool("popupShown", true);
+      showDialog(
+
+        context: context,
+
+        barrierDismissible: false,
+
+        builder: (_) => ExpiringPopup(
+          notifications: notifications,
+        ),
+      );
+
+      await prefs.setBool(
+        "popupShown",
+        true,
+      );
+
+    } catch (e) {
+
+      print(
+        "Popup Error: $e",
+      );
     }
   }
 
