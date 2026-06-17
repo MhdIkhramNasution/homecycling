@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../services/user_session.dart';
 
-class VoucherDetailPage extends StatelessWidget {
+class VoucherDetailPage extends StatefulWidget {
   final int voucherId;
   final String title;
   final String image;
@@ -17,54 +17,152 @@ class VoucherDetailPage extends StatelessWidget {
     required this.points,
   });
 
-  Future<void> redeemVoucher(
-      BuildContext context,
-      ) async {
+  @override
+  State<VoucherDetailPage> createState() => _VoucherDetailPageState();
+}
 
+class _VoucherDetailPageState extends State<VoucherDetailPage> {
+  // ── State ──────────────────────────────────────────────
+  String? _voucherCode;      // null  → belum di-load
+  bool _isLoadingCode = true; // sedang fetch /voucher-code
+  bool _isRedeeming = false;  // sedang fetch /redeem-voucher
+  bool _isRedeemed = false;   // sudah berhasil redeem
+
+  // ── Lifecycle ──────────────────────────────────────────
+  @override
+  void initState() {
+    super.initState();
+    _loadVoucherCode();
+  }
+
+  // ── Load existing voucher code (if already redeemed) ──
+  Future<void> _loadVoucherCode() async {
     try {
-
-      final response = await http.post(
-
+      // Backend: GET /voucher-code/{username}/{voucher_id}
+      final response = await http.get(
         Uri.parse(
-          "http://192.168.100.7:8000/redeem-voucher",
-        ),
-
-        headers: {
-          "Content-Type": "application/json",
-        },
-
-        body: jsonEncode({
-
-          "username":
-          UserSession.username,
-
-          "voucher_id":
-          voucherId,
-        }),
-      );
-
-      final data =
-      jsonDecode(response.body);
-
-      ScaffoldMessenger.of(context)
-          .showSnackBar(
-
-        SnackBar(
-
-          content: Text(
-
-            data["message"] ??
-                data["status"],
-          ),
+          "http://192.168.100.7:8000/voucher-code"
+              "/${UserSession.username}"
+              "/${widget.voucherId}",
         ),
       );
 
+      final data = jsonDecode(response.body);
+      final code = data["voucher_code"] as String? ?? "";
+
+      if (code.isNotEmpty) {
+        setState(() {
+          _voucherCode = code;
+          _isRedeemed = true;
+        });
+      }
     } catch (e) {
-
-      print(e);
+      debugPrint("voucher-code: $e");
+    } finally {
+      setState(() => _isLoadingCode = false);
     }
   }
 
+  // ── Redeem voucher ─────────────────────────────────────
+  Future<void> _redeemVoucher() async {
+    setState(() => _isRedeeming = true);
+
+    try {
+      final response = await http.post(
+        Uri.parse("http://192.168.100.7:8000/redeem-voucher"),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({
+          "username": UserSession.username,
+          "voucher_id": widget.voucherId,
+        }),
+      );
+
+      final data = jsonDecode(response.body);
+
+      if (data["status"] == "success") {
+        final code = data["voucher_code"] as String;
+
+        // Update UI langsung — kode muncul di card
+        setState(() {
+          _voucherCode = code;
+          _isRedeemed = true;
+        });
+
+        // Tampilkan dialog sukses
+        if (mounted) _showSuccessDialog(code);
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(data["message"] ?? "Redeem gagal")),
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint("redeem-voucher: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString())),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isRedeeming = false);
+    }
+  }
+
+  // ── Dialog sukses ──────────────────────────────────────
+  void _showSuccessDialog(String code) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        title: const Row(
+          children: [
+            Icon(Icons.check_circle, color: Colors.green),
+            SizedBox(width: 10),
+            Text("Sukses"),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              "Voucher Berhasil Ditukarkan 🎉",
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 15),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(15),
+              decoration: BoxDecoration(
+                color: Colors.green.shade50,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.green),
+              ),
+              child: Text(
+                code,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 3,
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("OK"),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Build ──────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -90,13 +188,14 @@ class VoucherDetailPage extends StatelessWidget {
             /// IMAGE
             ClipRRect(
               borderRadius: BorderRadius.circular(20),
-              child: Builder(
-                builder: (context) {
-
-                  print("IMAGE PATH = $image");
-
+              child: Image.asset(
+                widget.image,
+                width: double.infinity,
+                height: 180,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
                   return Image.asset(
-                    image,
+                    "assets/images/voucher_a_images.png",
                     width: double.infinity,
                     height: 180,
                     fit: BoxFit.cover,
@@ -109,7 +208,7 @@ class VoucherDetailPage extends StatelessWidget {
 
             /// TITLE
             Text(
-              title,
+              widget.title,
               style: const TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.bold,
@@ -133,13 +232,18 @@ class VoucherDetailPage extends StatelessWidget {
               ],
             ),
 
-            const SizedBox(height: 15),
-
-            /// ================= VOUCHER CODE =================
-            Center(
+            /// ================= VOUCHER CODE CARD =================
+            Container(
+              margin: const EdgeInsets.only(top: 20, bottom: 20),
+              width: double.infinity,
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(15),
+                border: Border.all(color: const Color(0xFF74A830)),
+              ),
               child: Column(
                 children: [
-
                   const Text(
                     "Voucher Code",
                     style: TextStyle(
@@ -147,34 +251,42 @@ class VoucherDetailPage extends StatelessWidget {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-
                   const SizedBox(height: 10),
 
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(vertical: 20),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: const Color(0xFF74A830)),
-                      borderRadius: BorderRadius.circular(15),
-                      color: Colors.white,
-                    ),
-                    child: const Center(
-                      child: Text(
-                        "F O 5 N 3 M",
-                        style: TextStyle(
-                          fontSize: 22,
-                          letterSpacing: 5,
-                          fontWeight: FontWeight.bold,
-                        ),
+                  // Loading state
+                  if (_isLoadingCode)
+                    const SizedBox(
+                      height: 24,
+                      width: 24,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Color(0xFF74A830),
                       ),
-                    ),
-                  ),
+                    )
 
+                  // Kode sudah tersedia
+                  else if (_voucherCode != null)
+                    Text(
+                      _voucherCode!,
+                      style: const TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 3,
+                        color: Color(0xFF577E24),
+                      ),
+                    )
+
+                  // Belum di-redeem
+                  else
+                    const Text(
+                      "Tap Redeem to get code",
+                      style: TextStyle(fontSize: 16),
+                    ),
                 ],
               ),
             ),
 
-            const SizedBox(height: 20),
+            const SizedBox(height: 15),
 
             /// ================= HOW TO USE =================
             Container(
@@ -188,75 +300,66 @@ class VoucherDetailPage extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-
                   const Text(
                     "How to Use",
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(fontWeight: FontWeight.bold),
                   ),
-
                   const SizedBox(height: 10),
-
-                  rowCheck("Use during checkout"),
-                  rowCheck("Valid before expiration"),
-                  rowCheck("One-time using only"),
-
+                  _rowCheck("Use during checkout"),
+                  _rowCheck("Valid before expiration"),
+                  _rowCheck("One-time using only"),
                   const Divider(height: 25),
-
                   const Text(
                     "Terms & Conditions",
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(fontWeight: FontWeight.bold),
                   ),
-
                   const SizedBox(height: 10),
-
-                  rowDot("Not exchangeable for cash"),
-                  rowDot("Cannot be combined with other promotions"),
-
+                  _rowDot("Not exchangeable for cash"),
+                  _rowDot("Cannot be combined with other promotions"),
                 ],
               ),
             ),
+
             const SizedBox(height: 20),
 
+            /// ================= REDEEM BUTTON =================
             SizedBox(
-
               width: double.infinity,
-
               child: ElevatedButton(
-
                 style: ElevatedButton.styleFrom(
-
-                  backgroundColor:
-                  const Color(0xFF577E24),
-
-                  foregroundColor:
-                  Colors.white,
+                  backgroundColor: _isRedeemed
+                      ? Colors.grey.shade400
+                      : const Color(0xFF577E24),
+                  foregroundColor: Colors.white,
                 ),
-
-                onPressed: () {
-
-                  redeemVoucher(
-                    context,
-                  );
-                },
-
-                child: Text(
-                  "Redeem ($points pts)",
+                // Nonaktifkan tombol saat loading, redeeming, atau sudah diredeem
+                onPressed: (_isLoadingCode || _isRedeeming || _isRedeemed)
+                    ? null
+                    : _redeemVoucher,
+                child: _isRedeeming
+                    ? const SizedBox(
+                  height: 18,
+                  width: 18,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                )
+                    : Text(
+                  _isRedeemed
+                      ? "Already Redeemed"
+                      : "Redeem (${widget.points} pts)",
                 ),
               ),
             ),
-
           ],
         ),
       ),
     );
   }
 
-  /// CHECK ITEM
-  Widget rowCheck(String text) {
+  // ── Helper widgets ─────────────────────────────────────
+  Widget _rowCheck(String text) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 5),
       child: Row(
@@ -269,8 +372,7 @@ class VoucherDetailPage extends StatelessWidget {
     );
   }
 
-  /// DOT ITEM
-  Widget rowDot(String text) {
+  Widget _rowDot(String text) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 5),
       child: Row(

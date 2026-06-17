@@ -205,17 +205,30 @@ class _RedeemHistoryPageState
                   final reward =
                   rewards[index];
                   return voucherItem(
+
                     context,
+
+                    reward["voucher_id"],
+
                     "assets/images/voucher_a_images.png",
+
                     reward["voucher_name"].toString(),
-                    reward["redeemed_at"].toString().split(" ")
+
+                    reward["redeemed_at"]
+                        .toString()
+                        .split(" ")
                         .first,
+
                     "Redeemed",
+
                     reward["status"].toString(),
+
                     reward["status"] == "available"
                         ? const Color(0xFF577E24)
                         : Colors.grey,
+
                     "assets/images/voucher_a_full_images.png",
+
                     reward["points_used"].toString(),
                   );
                 },
@@ -301,6 +314,8 @@ class _RedeemHistoryPageState
 
       BuildContext context,
 
+      int voucherId,
+
       String image,
 
       String title,
@@ -326,13 +341,13 @@ class _RedeemHistoryPageState
           MaterialPageRoute(
             builder: (_) => VoucherDetailPage(
 
-              voucherId: 0,
+              voucherId: voucherId,
 
               title: title,
 
               image: detailImage,
 
-              points: 0,
+              points: int.tryParse(points) ?? 0,
             ),
           ),
         );

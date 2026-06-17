@@ -4,6 +4,7 @@ import '../services/user_session.dart';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import '../services/websocket_service.dart';
 import 'inventory_page.dart';
 import 'goals_page.dart';
 import 'profile_page.dart';
@@ -48,6 +49,13 @@ class _HomePageState extends State<HomePage> {
 
     return "assets/images/$fileName.png";
   }
+  @override
+  void dispose() {
+
+    WebSocketService.disconnect();
+
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -65,12 +73,41 @@ class _HomePageState extends State<HomePage> {
 
   /// ================= LOAD PROFILE =================
   Future<void> loadProfile() async {
-    final data = await AuthService.getProfile();
+
+    final data =
+    await AuthService.getProfile();
 
     setState(() {
-      username = data["username"]!;
-      photo = data["photo"]!;
+
+      username =
+      data["username"]!;
+
+      photo =
+      data["photo"]!;
     });
+
+    // ================= WEBSOCKET =================
+
+    WebSocketService.connect(
+
+      username,
+
+          (notification) {
+
+        if (!mounted) return;
+
+        showDialog(
+
+          context: context,
+
+          builder: (_) => ExpiringPopup(
+            notifications: [
+              notification,
+            ],
+          ),
+        );
+      },
+    );
   }
 
   ///================== LOAD DASHBOARD ==============
