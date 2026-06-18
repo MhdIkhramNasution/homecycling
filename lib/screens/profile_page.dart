@@ -11,6 +11,7 @@ import 'privacy_page.dart';
 import 'welcome_screen.dart';
 import 'item_scanned_page.dart';
 import '../services/auth_service.dart';
+import '../services/profile_service.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -46,27 +47,17 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Future<void> loadProfile() async {
 
-    final data =
-    await AuthService.getProfile();
+    final localData = await AuthService.getProfile();
+    final currentUsername = localData["username"] ?? "";
+
+    final data = await ProfileService.getProfile(currentUsername);
 
     setState(() {
-
-      username =
-          data["username"] ?? "";
-
-      email =
-          data["email"] ?? "";
-
-      phone =
-          data["phone"] ?? "";
-
-      points =
-          int.tryParse(
-            data["points"].toString(),
-          ) ?? 0;
-
-      photoPath =
-      data["photo"];
+      username  = data["username"] ?? "";
+      email     = data["email"] ?? "";
+      phone     = data["phone"] ?? "";
+      points    = int.tryParse(data["points"].toString()) ?? 0;
+      photoPath = localData["photo"];
     });
   }
 
