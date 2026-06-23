@@ -235,7 +235,7 @@ class _HomePageState extends State<HomePage> {
     await http.post(
 
       Uri.parse(
-        "http://192.168.100.7:8000/scan/save",
+        "https://backendai-production-b126.up.railway.app/scan/save",
       ),
 
       headers: {

@@ -5,7 +5,7 @@ import 'user_session.dart';
 class HistoryService {
 
   static const String baseUrl =
-      "http://192.168.100.7:8000";
+      "https://backendai-production-b126.up.railway.app";
 
   static Future<List<dynamic>>
   getHistory() async {

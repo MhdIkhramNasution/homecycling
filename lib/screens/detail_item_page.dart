@@ -38,7 +38,7 @@ class _DetailItemPageState
     try {
       final response = await http.put(
         Uri.parse(
-          "http://192.168.100.7:8000/inventory/reduce-stock/${widget.itemId}",
+          "https://backendai-production-b126.up.railway.app/inventory/reduce-stock/${widget.itemId}",
         ),
       );
 

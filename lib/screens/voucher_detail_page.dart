@@ -41,7 +41,7 @@ class _VoucherDetailPageState extends State<VoucherDetailPage> {
       // Backend: GET /voucher-code/{username}/{voucher_id}
       final response = await http.get(
         Uri.parse(
-          "http://192.168.100.7:8000/voucher-code"
+          "https://backendai-production-b126.up.railway.app/voucher-code"
               "/${UserSession.username}"
               "/${widget.voucherId}",
         ),
@@ -69,7 +69,7 @@ class _VoucherDetailPageState extends State<VoucherDetailPage> {
 
     try {
       final response = await http.post(
-        Uri.parse("http://192.168.100.7:8000/redeem-voucher"),
+        Uri.parse("https://backendai-production-b126.up.railway.app/redeem-voucher"),
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "username": UserSession.username,

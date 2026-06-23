@@ -182,7 +182,7 @@ class _ManualAddPageState extends State<ManualAddPage> {
       final category = _categoryMap[key] ?? "Other";
 
       final response = await http.post(
-        Uri.parse("http://192.168.100.7:8000/inventory/manual-add"),
+        Uri.parse("https://backendai-production-b126.up.railway.app/manual-add"),
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "username":   UserSession.username,
@@ -195,7 +195,7 @@ class _ManualAddPageState extends State<ManualAddPage> {
 
       // Juga kirim ke endpoint /inventory/add agar expiry_days & status tersimpan
       await http.post(
-        Uri.parse("http://192.168.100.7:8000/inventory/add"),
+        Uri.parse("https://backendai-production-b126.up.railway.app/inventory/add"),
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "username":   UserSession.username,

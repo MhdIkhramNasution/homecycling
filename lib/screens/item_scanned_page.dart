@@ -195,7 +195,7 @@ class _ItemScannedPageState extends State<ItemScannedPage> {
     final status = _calculateStatus(selectedExpiryDate);
 
     final response = await http.post(
-      Uri.parse("http://192.168.100.7:8000/inventory/add"),
+      Uri.parse("https://backendai-production-b126.up.railway.app/inventory/add"),
       headers: {"Content-Type": "application/json"},
       body: jsonEncode({
         "username":   UserSession.username,

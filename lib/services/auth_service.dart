@@ -44,7 +44,7 @@ class AuthService {
     final response = await http.post(
 
       Uri.parse(
-        "http://192.168.100.7:8000/update-account",
+        "https://backendai-production-b126.up.railway.app/update-account",
       ),
 
       headers: {
@@ -115,7 +115,7 @@ class AuthService {
     final response = await http.get(
 
       Uri.parse(
-        "http://192.168.100.7:8000/profile/${UserSession.username}",
+        "https://backendai-production-b126.up.railway.app/profile/${UserSession.username}",
       ),
     );
 

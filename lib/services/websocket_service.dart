@@ -15,7 +15,7 @@ class WebSocketService {
     );
 
     channel = IOWebSocketChannel.connect(
-      'ws://192.168.100.7:8000/ws/$username',
+      'wss://backendai-production-b126.up.railway.app/ws/$username',
     );
 
     channel!.stream.listen(

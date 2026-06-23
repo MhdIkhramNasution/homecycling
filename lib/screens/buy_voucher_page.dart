@@ -33,7 +33,7 @@ class _BuyVoucherPageState extends State<BuyVoucherPage> {
       final response = await http.post(
 
         Uri.parse(
-          "http://192.168.100.7:8000/redeem-voucher",
+          "https://backendai-production-b126.up.railway.app/redeem-voucher",
         ),
 
         headers: {

@@ -203,7 +203,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
                         final response = await http.post(
 
-                          Uri.parse("http://192.168.100.7:8000/register"),
+                          Uri.parse("https://backendai-production-b126.up.railway.app/register"),
 
                           headers: {
                             "Content-Type": "application/json",

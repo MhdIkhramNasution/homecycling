@@ -9,7 +9,7 @@ class ProfileService {
     final response = await http.get(
 
       Uri.parse(
-        "http://192.168.100.7:8000/profile/$username",
+        "https://backendai-production-b126.up.railway.app/profile/$username",
       ),
     );
 
