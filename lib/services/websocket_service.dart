@@ -2,58 +2,87 @@ import 'dart:convert';
 import 'package:web_socket_channel/io.dart';
 
 class WebSocketService {
-
   static IOWebSocketChannel? channel;
+
+  static bool isConnected = false;
 
   static void connect(
       String username,
       Function(Map<String, dynamic>) onMessage,
       ) {
+    try {
+      print("================================");
+      print("CONNECTING WEBSOCKET");
+      print("USERNAME : $username");
+      print("================================");
 
-    print(
-        "Connecting WS : $username"
-    );
+      channel = IOWebSocketChannel.connect(
+        Uri.parse(
+          'wss://backendai-production-b126.up.railway.app/ws/$username',
+        ),
+      );
 
-    channel = IOWebSocketChannel.connect(
-      'wss://backendai-production-b126.up.railway.app/ws/$username',
-    );
+      channel!.stream.listen(
+            (data) {
+          print("WS MESSAGE : $data");
 
-    channel!.stream.listen(
+          try {
+            final decoded = jsonDecode(data);
 
-          (data) {
+            if (decoded is Map<String, dynamic>) {
+              onMessage(decoded);
+            }
+          } catch (e) {
+            print("JSON ERROR : $e");
+          }
+        },
 
-        print(
-            "WS MESSAGE : $data"
-        );
+        onError: (error) {
+          isConnected = false;
 
-        onMessage(
-          jsonDecode(data),
-        );
-      },
+          print("================================");
+          print("WS ERROR");
+          print(error);
+          print("================================");
+        },
 
-      onError: (e) {
+        onDone: () {
+          isConnected = false;
 
-        print(
-            "WS ERROR : $e"
-        );
-      },
+          print("================================");
+          print("WS CLOSED");
+          print("================================");
+        },
 
-      onDone: () {
+        cancelOnError: true,
+      );
 
-        print(
-            "WS CLOSED"
-        );
-      },
-    );
+      isConnected = true;
 
-    // keep alive
-    channel!.sink.add(
-        "connected"
-    );
+      print("WS CONNECTED");
+    } catch (e) {
+      print("CONNECT ERROR : $e");
+    }
+  }
+
+  static void send(String message) {
+    if (channel != null && isConnected) {
+      try {
+        channel!.sink.add(message);
+      } catch (e) {
+        print("SEND ERROR : $e");
+      }
+    }
   }
 
   static void disconnect() {
+    try {
+      channel?.sink.close();
+      isConnected = false;
 
-    channel?.sink.close();
+      print("WS DISCONNECTED");
+    } catch (e) {
+      print("DISCONNECT ERROR : $e");
+    }
   }
 }
